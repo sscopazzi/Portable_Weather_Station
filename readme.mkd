@@ -1,0 +1,41 @@
+## Portable Weather Station
+
+A small portable personal weather station to collect, display, and save basic atmospheric data. I've also added a GPS module to display location (the speed and altitude are less reliable from the module).
+
+## Sensor Parts
+
+| PID   | Item                                             | Description                                                         |
+|-------|--------------------------------------------------|---------------------------------------------------------------------|
+| [5980](https://www.adafruit.com/product/5980)  | Adafruit Feather RP2040 Adalogger                | 8MB Flash with microSD Card - STEMMA QT / Qwiic                     |
+| [4415](https://www.adafruit.com/product/4415)  | Adafruit Mini GPS PA1010D                        | UART and I2C - STEMMA QT                                            |
+| [4816](https://www.adafruit.com/product/4816)  | Adafruit BMP390                                  | Precision Barometric Pressure and Altimeter - STEMMA QT / Qwiic     |
+| [5297](https://www.adafruit.com/product/5297)  | Adafruit Monochrome 1.12" OLED Graphic Display   | 128x128 - STEMMA QT / Qwiic                                         |
+| [5665](https://www.adafruit.com/product/5665)  | Adafruit Sensirion SHT45 Precision Temperature & Humidity | STEMMA QT / Qwiic                                          |
+
+### Utility Parts
+
+| PID   | Item                                             | Description                                                         |
+|-------|--------------------------------------------------|---------------------------------------------------------------------|
+| [380](https://www.adafruit.com/product/380)    | CR1220 12mm Diameter - 3V Lithium Coin Cell      | CR1220, for GPS module                                              |
+| [353](https://www.adafruit.com/product/353)    | Lithium Ion Battery Pack                         | 3.7V 6600mAh                                                        |
+| [1294](https://www.adafruit.com/product/1294)  | SD/MicroSD Memory Card                           | 8 GB SDHC (could get elsewhere but ordered all through Adafruit)    |
+| [2787](https://www.adafruit.com/product/2787)  | Through-Hole Resistors                           | 100K ohm 5% 1/4W - Pack of 25, for battery monitoring               |
+| [3064](https://www.adafruit.com/product/3064)  | JST 2-pin Extension Cable with On/Off Switch     | JST PH2 (battery on/off switch)                                     |
+| [3870](https://www.adafruit.com/product/3870)  | Mini On/Off Push-Button Switch                   | Change screen buttons                                               |
+| [4210](https://www.adafruit.com/product/4210)  | STEMMA QT / Qwiic JST SH 4-Pin Cable             | 100mm Long                                                          |
+| [4399](https://www.adafruit.com/product/4399)  | STEMMA QT / Qwiic JST SH 4-Pin Cable             | 50mm Long                                                           |
+| [4468](https://www.adafruit.com/product/4468)  | Miniature 5V Cooling Fan                         | Molex PicoBlade Connector (cut wires)                               |
+| [4739](https://www.adafruit.com/product/4739)  | MPM3610 5V Buck Converter Breakout               | 21V max in 5V out at 1.2A                                           |
+
+## Future Steps
+
+This is a side project of mine, so it's not something I'll call done yet, and updates may be slow. Future steps include:
+
+1) Designing and 3D printing a weatherproof (as close as possible given I want to see the screen and the GPS module must work) housing with supply fan
+2) Power design changes (5v buck for display)
+3) An anemometer, of some sort. It must be small and easily portable though, so if you have ideas please let me know!
+4) Buttons to change screen display with ability to show historical trends (1hr, 6hr, etc)
+
+As things get done this list will change. Thanks for checking it out!
+
+Sophie <3
