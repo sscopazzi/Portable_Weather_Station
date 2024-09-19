@@ -11,6 +11,7 @@ extern int gpsFixQuality;
 extern float gpsLatitude, gpsLongitude, gpsSpeed, gpsAngle, gpsAltitude;
 extern int gpsSatellites;
 extern char gpsLatDir, gpsLonDir;
+extern float latDecimalDegrees, lonDecimalDegrees; 
 
 /*********************************************************************
   This is an example for our Monochrome OLEDs based on SH1107 drivers
@@ -87,8 +88,8 @@ void loopDisplay(){
   display.print("F: "); display.println(tempF);
   display.print("H: "); display.println(humidity); 
   display.print("P: "); display.println(pressurehPa); 
-  display.print("La: "); display.println(gpsLatitude); 
-  display.print("Lo: "); display.println(gpsLongitude);
+  display.print("La: "); display.println(latDecimalDegrees,3); 
+  display.print("Lo:"); display.println(lonDecimalDegrees,2);
   display.print("Sp: "); display.println(gpsSpeed); 
   display.print("Al: "); display.print(gpsAltitude);
 
@@ -96,17 +97,3 @@ void loopDisplay(){
   display.display();
   // loopnum = loopnum + 1;
 }
-
-
-    // dataFile.print(gpsYear);        dataFile.print(",");
-    // dataFile.print(gpsMonth);       dataFile.print(",");
-    // dataFile.print(gpsDay);         dataFile.print(",");
-    // dataFile.print(gpsHour);        dataFile.print(",");
-    // dataFile.print(gpsMinute);      dataFile.print(",");
-    // dataFile.print(gpsSecond);      dataFile.print(",");
-    // dataFile.print(gpsFix);         dataFile.print(",");
-    // dataFile.print(gpsFixQuality);  dataFile.print(",");
-    // dataFile.print(gpsLatDir);      dataFile.print(",");
-    // dataFile.print(gpsLonDir);      dataFile.print(",");
-    // dataFile.print(gpsAngle);       dataFile.print(",");
-    // dataFile.println(gpsSatellites);

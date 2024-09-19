@@ -1,20 +1,25 @@
-#include "display.h"
-
-float humidity;
-float tempC;
-float tempF;
-float pressurehPa;
+#include "display.h" // DISPLAY FUNCTIONS IN .H 
 
 const char filename[] = "20240917_weatherstation_walkingtest.txt";
 
+// ATMO
+float humidity, tempC, tempF, pressurehPa;
+
+//GPS
+bool gpsFix;
+int gpsFixQuality, gpsSatellites;
+char gpsLatDir, gpsLonDir;  // N S E W
+
+// GPS TIME
 int gpsHour, gpsMinute, gpsSecond, gpsMilliseconds;
 int gpsDay, gpsMonth, gpsYear;
-bool gpsFix;
-int gpsFixQuality;
-float gpsLatitude, gpsLongitude, gpsSpeed, gpsAngle, gpsAltitude;
-int gpsSatellites;
-char gpsLatDir, gpsLonDir;
 
+// GPS LOCATION
+float gpsLatitude, gpsLongitude, gpsSpeed, gpsAngle, gpsAltitude;
+float latDecimalDegrees, lonDecimalDegrees; // saved for easy plotting
+
+//*******************************************************************************
+// SD card
 #include <SPI.h>
 #include "SdFat.h"
 
@@ -23,7 +28,6 @@ char gpsLatDir, gpsLonDir;
 SdFat SD;
 File32 dataFile;
 SdSpiConfig config(SD_CS_PIN, DEDICATED_SPI, SD_SCK_MHZ(16), &SPI1);
-
 
 // Initialize the SD card
 void setupSD() {
@@ -80,9 +84,9 @@ void loopSD() {
     dataFile.print(pressurehPa);    dataFile.print(",");
     dataFile.print(gpsFix);         dataFile.print(",");
     dataFile.print(gpsFixQuality);  dataFile.print(",");
-    dataFile.print(gpsLatitude,4);  dataFile.print(",");
+    dataFile.print(latDecimalDegrees,7);  dataFile.print(",");
     dataFile.print(gpsLatDir);      dataFile.print(",");
-    dataFile.print(gpsLongitude,4); dataFile.print(",");
+    dataFile.print(lonDecimalDegrees,7); dataFile.print(",");
     dataFile.print(gpsLonDir);      dataFile.print(",");
     dataFile.print(gpsSpeed);       dataFile.print(",");
     dataFile.print(gpsAngle);       dataFile.print(",");
@@ -111,7 +115,6 @@ void loopSD() {
     while (1) {}  // Halt the system until the SD card is fixed
   }
 }
-
 
 // TEMP AND HUMIDITY SHT45
 /*************************************************** 
@@ -208,15 +211,15 @@ void loopSHT45(){
   humidity = humidityEvent.relative_humidity;  // Use the correct global humidity variable
 }
 
+// GPS LOCATION 
+/*********************************************************
+  Test code for Adafruit GPS That Support Using I2C
 
+  This code shows how to parse data from the I2C GPS
 
-// LOCATION PARSING
-// Test code for Adafruit GPS That Support Using I2C
-//
-// This code shows how to parse data from the I2C GPS
-//
-// Pick one up today at the Adafruit electronics shop
-// and help support open source hardware & software! -ada
+  Pick one up today at the Adafruit electronics shop
+  and help support open source hardware & software! -ada
+**********************************************************/
 
 #include <Adafruit_GPS.h>
 
@@ -229,6 +232,25 @@ Adafruit_GPS GPS(&Wire);
 
 uint32_t timer = millis();
 
+float convertToDecimalDegrees(float coordinate, char direction) {
+    int degrees;
+    float minutes;
+
+    // Extract the degrees part (dd for latitude, ddd for longitude)
+    degrees = (int)(coordinate / 100);
+    // Extract minutes part (mm.mmmm)
+    minutes = coordinate - (degrees * 100);
+    
+    // Convert minutes to decimal degrees
+    float decimalDegrees = degrees + (minutes / 60.0);
+
+    // Adjust for southern or western hemispheres
+    if (direction == 'S' || direction == 'W') {
+        decimalDegrees = -decimalDegrees;
+    }
+
+    return decimalDegrees;
+}
 
 void setupLOC(){
   //while (!Serial);  // uncomment to have the sketch wait until Serial is ready
@@ -309,10 +331,15 @@ void loopLOC(){
       gpsFixQuality = GPS.fixquality;
 
       if (gpsFix) {
-        gpsLatitude = (GPS.latitude)/100;
-        gpsLongitude = (GPS.longitude)/100;
+        gpsLatitude = (GPS.latitude);
+        gpsLongitude = (GPS.longitude);
         gpsLatDir = GPS.lat;
         gpsLonDir = GPS.lon;
+
+        // Convert latitude and longitude to decimal degrees
+        latDecimalDegrees = convertToDecimalDegrees(gpsLatitude, gpsLatDir);
+        lonDecimalDegrees = convertToDecimalDegrees(gpsLongitude, gpsLonDir);
+
         gpsSpeed = GPS.speed;
         gpsAngle = GPS.angle;
         gpsAltitude = GPS.altitude;
@@ -344,9 +371,9 @@ void loopLOC(){
 
       if (gpsFix) {
         Serial.print("Location: ");
-        Serial.print(gpsLatitude, 4); Serial.print(gpsLatDir);
+        Serial.print(latDecimalDegrees, 6); Serial.print(gpsLatDir);
         Serial.print(", ");
-        Serial.print(gpsLongitude, 4); Serial.println(gpsLonDir);
+        Serial.print(lonDecimalDegrees, 6); Serial.println(gpsLonDir);
         Serial.print("Speed (knots): "); Serial.println(gpsSpeed);
         Serial.print("Angle: "); Serial.println(gpsAngle);
         Serial.print("Altitude: "); Serial.println(gpsAltitude);
@@ -424,7 +451,7 @@ void loopBMP390(){
 }
 
 
-
+// PROGRAM
 void setup() {
   Serial.begin(115200);
   while (!Serial)
