@@ -1,0 +1,3 @@
+### First Walking Test
+
+Starting at northernmost location and walking south. The position was saved every ten seconds. Walking began once a valid position was observed on display.
