@@ -1,6 +1,6 @@
 #include "display.h" // DISPLAY FUNCTIONS IN .H 
 
-const char filename[] = "20240917_weatherstation_walkingtest.txt";
+const char filename[] = "20240922_weatherstation_displayHist.txt";
 
 // ATMO
 float humidity, tempC, tempF, pressurehPa;
@@ -17,6 +17,16 @@ int gpsDay, gpsMonth, gpsYear;
 // GPS LOCATION
 float gpsLatitude, gpsLongitude, gpsSpeed, gpsAngle, gpsAltitude;
 float latDecimalDegrees, lonDecimalDegrees; // saved for easy plotting
+
+// DISPLAY BUTTONS
+const int buttonPin = 2;  // where the pushbutton is connected
+
+// Variable to store the current display mode
+int displayMode = 0;
+int numDisplays = 3;  // Total number of displays (adjust as needed)
+bool buttonPressed = false;
+unsigned long lastDebounceTime = 0;
+unsigned long debounceDelay = 50; // Debounce delay
 
 //*******************************************************************************
 // SD card
@@ -454,6 +464,8 @@ void loopBMP390(){
 // PROGRAM
 void setup() {
   Serial.begin(115200);
+  pinMode(buttonPin, INPUT_PULLUP);  // Set button pin as input with internal pull-up resistor
+
   while (!Serial)
     delay(200);     // will pause Zero, Leonardo, etc until serial console opens
 
@@ -500,7 +512,7 @@ void setup() {
   display.println("");
   display.println("  Sophie LV Scopazzi");
   display.println("  Weather Station v1" );
-  display.println("     2024-09-17");
+  display.println("     2024-09-22");
   display.display();
   delay(5000);
 }
@@ -513,6 +525,20 @@ void loop() {
   loopBMP390();
 
   // UTILITY
-  loopDisplay();
   loopSD();
+  // loopDisplay();
+  checkButton();
+  switch (displayMode) { // Call the appropriate display function based on the current display mode
+    case 0:
+      loopDisplayAll();
+      // loopDisplayPressureHistory();
+      // loopDisplayLoc();
+      break;
+    case 1:
+      loopDisplayLoc();
+      break;
+    case 2:
+      // loopDisplayAltitude(); 
+      break;
+    }
 }
