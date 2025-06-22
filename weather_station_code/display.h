@@ -23,10 +23,11 @@ extern unsigned long debounceDelay;
 
 // SHOW HISTORY THINGS
 #include <SdFat.h>
-extern const char filename[];     // Declare the filename as external
+extern const char filename[];
 extern SdFat SD;
 extern File32 dataFile;  // Declare the file object as external
 
+extern float vBat;
 
 /*********************************************************************
   This is an example for our Monochrome OLEDs based on SH1107 drivers
@@ -82,7 +83,7 @@ void setupDisplay(){
   }
 
   display.clearDisplay();             // Clear the buffer, if it exists 
-  // display.setRotation(2);             // it's mounted upside down rn
+  display.setRotation(3);             // it's mounted upside down rn
   display.setTextSize(1);             // Normal 1:1 pixel scale
   display.setTextColor(SH110X_WHITE);        // Draw white text
   display.setCursor(0,0);             // Start at top-left corner
@@ -99,7 +100,8 @@ void loopDisplayAll(){
   display.setCursor(0,0);             // Start at top-left corner
 
   // send stbd lat/lon to OLED
-  display.print("C: "); display.println(tempC);
+  // display.print("C: "); display.println(tempC);
+  display.print("V: "); display.println(vBat);
   display.print("F: "); display.println(tempF);
   display.print("H: "); display.println(humidity); 
   display.print("P: "); display.println(pressurehPa); 
@@ -128,14 +130,13 @@ void loopDisplayLoc(){
   display.println("        DDMM.mm");
   
   display.println("");
-  display.print("Sp: "); display.println(gpsSpeed); 
-  display.print("Al: "); display.print(gpsAltitude);
+  display.print("Sp: ");  display.println(gpsSpeed); 
+  display.print("Al: ");  display.println(gpsAltitude);
+  display.println("");
+  display.print("vBat");  display.println(vBat);
 
   display.display();
 }
-
-
-
 
 
 void checkButton() {
@@ -156,10 +157,9 @@ void checkButton() {
   }
 }
 
-
-
 void getPressureData(float pressureData[], int totalPoints) {
-  dataFile = SD.open(filename, FILE_WRITE);
+  // dataFile = SD.open(filename, FILE_WRITE);
+  dataFile.open(filename, O_WRITE | O_CREAT | O_APPEND);
 
   const int maxLines = 2160; // 6 hours of data at 10 seconds per entry
   String lines[maxLines];
@@ -214,7 +214,6 @@ void getPressureData(float pressureData[], int totalPoints) {
   }
 }
 
-
 void drawPressureGraph(int graphTop, int graphWidth, int graphHeight) {
     int numPoints = 360; // Example number of points (6 hours of data at 60s intervals)
     float pressureData[numPoints];  // Array of pressure data points
@@ -240,7 +239,6 @@ void drawPressureGraph(int graphTop, int graphWidth, int graphHeight) {
         display.drawLine(x1, y1, x2, y2, SH110X_WHITE);
     }
 }
-
 
 void loopDisplayPressureHistory() {
     display.clearDisplay();

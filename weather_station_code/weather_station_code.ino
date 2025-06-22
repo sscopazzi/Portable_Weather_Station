@@ -1,6 +1,6 @@
 #include "display.h" // DISPLAY FUNCTIONS IN .H 
 
-const char filename[] = "20240922_weatherstation_displayHist.txt";
+const char filename[] = "20250618_weatherstation_displayHist.txt";
 
 // ATMO
 float humidity, tempC, tempF, pressurehPa;
@@ -22,13 +22,16 @@ float latDecimalDegrees, lonDecimalDegrees; // saved for easy plotting
 const int buttonPin = 2;  // where the pushbutton is connected
 
 // Variable to store the current display mode
-int displayMode = 0;
+int displayMode = 0;  // 0 everything, 1 Location only
 int numDisplays = 3;  // Total number of displays (adjust as needed)
 bool buttonPressed = false;
 unsigned long lastDebounceTime = 0;
 unsigned long debounceDelay = 50; // Debounce delay
 
 //*******************************************************************************
+#define VBATPIN A3
+float vBat = 0.0;
+
 // SD card
 #include <SPI.h>
 #include "SdFat.h"
@@ -69,9 +72,9 @@ while (!Serial) { yield(); delay(10); }     // wait till serial port is opened
   }
 
   // Open file and write the header once
-  dataFile = SD.open(filename, FILE_WRITE);
+  dataFile.open(filename, O_WRITE | O_CREAT | O_APPEND);
   if (dataFile) {
-    dataFile.println("time,tempC,tempF,humidity,pressurehPa,fix,fixQual,lat,latDir,lon,lonDir,speed,angle,alt,satNum");
+    dataFile.println("time,tempC,tempF,humidity,pressurehPa,fix,fixQual,lat,latDir,lon,lonDir,speed,angle,alt,satNum,vBat");
     dataFile.close();
     Serial.println("Card initialized! Header added.");
   }
@@ -80,7 +83,7 @@ while (!Serial) { yield(); delay(10); }     // wait till serial port is opened
 // Append data to the SD card
 void loopSD() {
   // Open the file for appending data
-  dataFile = SD.open(filename, FILE_WRITE);
+  dataFile.open(filename, O_WRITE | O_CREAT | O_APPEND);
   if (dataFile) {
     dataFile.print(gpsYear);        dataFile.print("-");
     dataFile.print(gpsMonth);       dataFile.print("-");
@@ -101,7 +104,8 @@ void loopSD() {
     dataFile.print(gpsSpeed);       dataFile.print(",");
     dataFile.print(gpsAngle);       dataFile.print(",");
     dataFile.print(gpsAltitude);    dataFile.print(",");
-    dataFile.println(gpsSatellites);
+    dataFile.print(gpsSatellites);  dataFile.print(",");
+    dataFile.println(vBat);
     dataFile.close();  // Close after writing
 
   } else {
@@ -242,25 +246,18 @@ Adafruit_GPS GPS(&Wire);
 
 uint32_t timer = millis();
 
-float convertToDecimalDegrees(float coordinate, char direction) {
-    int degrees;
-    float minutes;
-
-    // Extract the degrees part (dd for latitude, ddd for longitude)
-    degrees = (int)(coordinate / 100);
-    // Extract minutes part (mm.mmmm)
-    minutes = coordinate - (degrees * 100);
-    
-    // Convert minutes to decimal degrees
+float convertDDMMmmToDecimalDegrees(float coordinate, char direction) {
+    int degrees = (int)coordinate;
+    float minutes = (coordinate - degrees) * 100.0;
     float decimalDegrees = degrees + (minutes / 60.0);
 
-    // Adjust for southern or western hemispheres
     if (direction == 'S' || direction == 'W') {
         decimalDegrees = -decimalDegrees;
     }
 
     return decimalDegrees;
 }
+
 
 void setupLOC(){
   //while (!Serial);  // uncomment to have the sketch wait until Serial is ready
@@ -347,8 +344,8 @@ void loopLOC(){
         gpsLonDir = GPS.lon;
 
         // Convert latitude and longitude to decimal degrees
-        latDecimalDegrees = convertToDecimalDegrees(gpsLatitude, gpsLatDir);
-        lonDecimalDegrees = convertToDecimalDegrees(gpsLongitude, gpsLonDir);
+        latDecimalDegrees = convertDDMMmmToDecimalDegrees(gpsLatitude, gpsLatDir);
+        lonDecimalDegrees = convertDDMMmmToDecimalDegrees(gpsLongitude, gpsLonDir);
 
         gpsSpeed = GPS.speed;
         gpsAngle = GPS.angle;
@@ -512,7 +509,7 @@ void setup() {
   display.println("");
   display.println("  Sophie LV Scopazzi");
   display.println("  Weather Station v1" );
-  display.println("     2024-09-22");
+  display.println("     2025-06-18");
   display.display();
   delay(5000);
 }
@@ -523,6 +520,12 @@ void loop() {
   loopLOC();
   loopSHT45();
   loopBMP390();
+
+  // UTILITY
+  vBat = analogRead(VBATPIN);
+  vBat /= 1023.0; // Scale down to 0.0 to 1.0
+  vBat *= 3.3;    // Multiply by 3.3V, our reference voltage
+  vBat *= 2;      // Compensate for resistor divider
 
   // UTILITY
   loopSD();
