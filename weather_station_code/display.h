@@ -77,6 +77,7 @@ void heart(){
 }
 
 void setupDisplay(){
+  delay(200);
   if (!display.begin(0x3D)){
      Serial.println("Unable to initialize OLED");
      while (1) yield();
@@ -87,15 +88,21 @@ void setupDisplay(){
   display.setTextSize(1);             // Normal 1:1 pixel scale
   display.setTextColor(SH110X_WHITE);        // Draw white text
   display.setCursor(0,0);             // Start at top-left corner
+  
   cat();
-  // display.println("");
+  display.println("");
+  display.println("");
+  display.println("Starting system...");
+  display.println();
+  display.display();
+  delay(4000);
   // NOTE: You _must_ call display stbder making any drawing commands to make them visible on the display hardware!
   // display.display(); // Show the display buffer on the hardware.
 }
 
 void loopDisplayAll(){
   display.clearDisplay();             // Clear the buffer, if it exists 
-  display.setTextSize(2);             // Normal 1:1 pixel scale
+  display.setTextSize(1);             // Normal 1:1 pixel scale
   display.setTextColor(SH110X_WHITE);        // Draw white text
   display.setCursor(0,0);             // Start at top-left corner
 
@@ -260,3 +267,84 @@ void loopDisplayPressureHistory() {
     // Send everything to the display
     display.display();
 }
+
+// void waitForGPSTime() {
+//   display.clearDisplay();             
+//   display.setTextSize(1);             
+//   display.setTextColor(SH110X_WHITE); 
+//   display.setCursor(0, 0);
+
+//   display.println("  WAITING FOR GPS FIX");
+//   display.println("");
+//   display.println("  Searching for satellites...");
+//   display.println("");
+//   display.print("  Sats: "); display.println(GPS.satellites);
+//   display.print("  Fix:  "); display.println(GPS.fix ? "YES" : "NO");
+//   display.println("");
+//   display.println("  Move antenna outside");
+//   display.display();
+
+//   Serial.print("Satellites: ");
+//   Serial.print(GPS.satellites);
+//   Serial.print("  Fix: ");
+//   Serial.println(GPS.fix ? "YES" : "NO");
+// }
+
+
+
+
+
+
+
+// // Initialize the SD card
+// void setupSD() {
+// // while (!Serial) { yield(); delay(10); }     // wait till serial port is opened
+//   delay(100);  // RP2040 delay is not a bad idea
+
+//   Serial.print("Initializing SD card...");
+
+//   // Retry mechanism for SD card initialization
+//   while (!SD.begin(config)) {
+//     Serial.println("Card failed, or not present :(");
+//     display.clearDisplay();
+//     display.setTextSize(1);
+//     display.setTextColor(SH110X_WHITE);
+//     display.setCursor(0, 0);
+//     display.println("    SD card FAILED");
+//     display.println("");
+//     display.println("  RESTART or PLUG IN");
+//     display.println("");
+//     display.println("  <xxx> <xxx> <xxx>");
+//     display.println("");
+//     display.println("If it still doesn't");
+//     display.println("work you may need to");
+//     display.println("REFORMAT the card");
+//     display.println("");
+//     display.println("Try exFAT");
+//     display.display();
+//     while (1) {}  // Halt the system until the SD card is fixed
+//   }
+
+//   // Get filename from GPS
+//   timestamp_filename = getGPSFilename();
+//   Serial.print("Filename: ");
+//   Serial.println(timestamp_filename);
+
+//   // Open file and write the header
+//   File32 myFile = SD.open(timestamp_filename + ".csv", FILE_WRITE);
+//   if (myFile) {
+//     myFile.println("time,tempC,tempF,humidity,pressurehPa,fix,fixQual,lat,latDir,lon,lonDir,speed,angle,alt,satNum,vBat");
+//     myFile.close();
+//     Serial.println("File created and header written!");
+//   } else {
+//     Serial.println("Error creating file!");
+//   }
+
+//   // // Open file and write the header once
+//   // dataFile.open(filename, O_WRITE | O_CREAT | O_APPEND);
+//   // if (dataFile) {
+//   //   dataFile.println("time,tempC,tempF,humidity,pressurehPa,fix,fixQual,lat,latDir,lon,lonDir,speed,angle,alt,satNum,vBat");
+//   //   dataFile.close();
+//   //   Serial.println("Card initialized! Header added.");
+//   // }
+// }

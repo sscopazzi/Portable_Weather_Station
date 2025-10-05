@@ -1,6 +1,7 @@
 #include "display.h" // DISPLAY FUNCTIONS IN .H 
 
-const char filename[] = "20250618_weatherstation_displayHist.txt";
+// const char filename[] = "20250618_weatherstation_displayHist.txt";
+String timestamp_filename = "";   // YYYY-MM-DD hh-mm-ss in Mode 0 and YYYY-MM-DD in Modes 1 and 2
 
 // ATMO
 float humidity, tempC, tempF, pressurehPa;
@@ -41,13 +42,13 @@ float vBat = 0.0;
 SdFat SD;
 File32 dataFile;
 SdSpiConfig config(SD_CS_PIN, DEDICATED_SPI, SD_SCK_MHZ(16), &SPI1);
+unsigned long waitCounter = 0;  // counts seconds waiting
 
 // Initialize the SD card
 void setupSD() {
-while (!Serial) { yield(); delay(10); }     // wait till serial port is opened
   delay(100);  // RP2040 delay is not a bad idea
 
-  Serial.print("Initializing SD card...");
+  Serial.println("Initializing SD card...");
 
   // Retry mechanism for SD card initialization
   while (!SD.begin(config)) {
@@ -71,19 +72,48 @@ while (!Serial) { yield(); delay(10); }     // wait till serial port is opened
     while (1) {}  // Halt the system until the SD card is fixed
   }
 
+  // Wait for GPS time and build filename
+  timestamp_filename = getGPSFilename();
+  // Serial.print("Filename: ");
+  // Serial.println(timestamp_filename);
+
   // Open file and write the header once
-  dataFile.open(filename, O_WRITE | O_CREAT | O_APPEND);
+  dataFile.open((timestamp_filename + ".csv").c_str(), O_WRITE | O_CREAT | O_APPEND);
   if (dataFile) {
+    dataFile.println("PORTABLE WEATHER STATION ver. 05 OCT 2025");
+    dataFile.println("Time for valid fix: " + String(waitCounter));
     dataFile.println("time,tempC,tempF,humidity,pressurehPa,fix,fixQual,lat,latDir,lon,lonDir,speed,angle,alt,satNum,vBat");
     dataFile.close();
     Serial.println("Card initialized! Header added.");
+  } else {
+    Serial.println("Card failed, or not present :(");
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextColor(SH110X_WHITE);
+    display.setCursor(0, 0);
+    display.println("    SD card FAILED");
+    display.println("");
+    display.println("  RESTART or PLUG IN");
+    display.println("");
+    display.println("  <xxx> <xxx> <xxx>");
+    display.println("");
+    display.println("If it still doesn't");
+    display.println("work you may need to");
+    display.println("REFORMAT the card");
+    display.println("");
+    display.println("Try exFAT");
+    display.display();
+    while (1) {}  // Halt the system until the SD card is fixed
   }
 }
+
+
 
 // Append data to the SD card
 void loopSD() {
   // Open the file for appending data
-  dataFile.open(filename, O_WRITE | O_CREAT | O_APPEND);
+  dataFile.open((timestamp_filename + ".csv").c_str(), O_WRITE | O_CREAT | O_APPEND);
+
   if (dataFile) {
     dataFile.print(gpsYear);        dataFile.print("-");
     dataFile.print(gpsMonth);       dataFile.print("-");
@@ -258,14 +288,13 @@ float convertDDMMmmToDecimalDegrees(float coordinate, char direction) {
     return decimalDegrees;
 }
 
-
 void setupLOC(){
   //while (!Serial);  // uncomment to have the sketch wait until Serial is ready
 
   // connect at 115200 so we can read the GPS fast enough and echo without dropping chars
   // also spit it out
   // Serial.begin(115200);
-  Serial.println("Adafruit I2C GPS library basic test!");
+  // Serial.println("Adafruit I2C GPS library basic test!");
   delay(250);
   // 9600 NMEA is the default baud rate for Adafruit MTK GPS's- some use 4800
   GPS.begin(0x10);  // The I2C address to use is 0x10
@@ -288,7 +317,8 @@ void setupLOC(){
   // delay(1000);
 
   // Ask for firmware version
-  GPS.println(PMTK_Q_RELEASE);
+  // GPS.println(PMTK_Q_RELEASE);
+
 }
 
 void loopLOC(){
@@ -389,6 +419,83 @@ void loopLOC(){
     // }
 }
 
+String getGPSFilename() {
+  // Wait until GPS time is valid
+while (!GPS.fix || GPS.year < 25) {
+  Serial.print("Satellites: ");
+  Serial.print(GPS.satellites);
+  Serial.print("  Fix: ");
+  Serial.print(GPS.fix ? "YES" : "NO");
+  Serial.print("  Wait: ");
+  Serial.print(waitCounter);
+  Serial.println("s");
+
+  // --- OLED Display ---
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SH110X_WHITE);
+  display.setCursor(0, 0);
+  display.println("WAITING FOR GPS TIME");
+  display.println();
+  display.println("Searching...");
+  display.println("");
+  display.print("Fix:  "); display.println(GPS.fix ? "YES" : "NO");
+  display.print("Sats: "); display.println(GPS.satellites);
+  // display.print("Year: "); display.println(GPS.year);
+  display.println();
+  display.print("Wait: "); display.print(waitCounter); display.println("s");
+  display.display();
+
+  // --- GPS Update ---
+  delay(1000);  // 1 second per count
+  waitCounter++;
+
+  char c = GPS.read();
+  if (GPS.newNMEAreceived()) {
+    GPS.parse(GPS.lastNMEA());
+  }
+}
+
+  // <<< START OF FIX >>>
+  // Update global time variables with the data from the internal GPS object 
+  // now that a valid fix has been acquired.
+  gpsYear   = GPS.year;
+  gpsMonth  = GPS.month;
+  gpsDay    = GPS.day;
+  gpsHour   = GPS.hour;
+  gpsMinute = GPS.minute;
+  gpsSecond = GPS.seconds;
+  // <<< END OF FIX >>>
+
+  // --- Build timestamp string once GPS time is valid ---
+  char filename[32];
+  sprintf(filename, "%02d-%02d-%02d_%02d-%02d-%02d",
+          gpsYear, gpsMonth, gpsDay,
+          gpsHour, gpsMinute, gpsSecond);
+
+  String builtFilename = String(filename);
+
+  // --- Display confirmation ---
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SH110X_WHITE);
+  display.setCursor(0, 0);
+  display.println();
+  display.println("Filename created:");
+  display.println("Date used:");
+  display.println(builtFilename);
+  display.println();
+  display.display();
+
+  Serial.print("Filename created: ");
+  Serial.println(builtFilename + ".csv");
+
+  delay(3000);  // Pause to show filename
+
+  return builtFilename;
+}
+
+
 
 // BMP390
 /***************************************************************************
@@ -463,25 +570,22 @@ void setup() {
   Serial.begin(115200);
   pinMode(buttonPin, INPUT_PULLUP);  // Set button pin as input with internal pull-up resistor
 
-  while (!Serial)
-    delay(200);     // will pause Zero, Leonardo, etc until serial console opens
+  // while (!Serial)
+  //   delay(200);     // will pause Zero, Leonardo, etc until serial console opens
 
   // UTILITY  
   setupDisplay();
-  display.println("");
-  display.println("Starting system...");
-  display.println("");
-  display.display();
-  delay(1000);
+
+  // SENSORS (need time first for file name)
+  setupLOC();
+  delay(300);
+
   setupSD();
   display.println("SD Card  healthy!");
   display.display();
-
-  // SENSORS
-  setupLOC();
+  delay(300);
   display.println("GPS      healthy!");
   display.display();
-  delay(300);
 
   setupSHT45();
   display.println("SHT45    healthy!");
@@ -490,7 +594,7 @@ void setup() {
 
   setupBMP390();
   display.println("BMP390   healthy!");
-  display.println("");
+  display.println();
   display.display();
   delay(5000);
   
@@ -509,7 +613,7 @@ void setup() {
   display.println("");
   display.println("  Sophie LV Scopazzi");
   display.println("  Weather Station v1" );
-  display.println("     2025-06-18");
+  display.println("     2025-10-05");
   display.display();
   delay(5000);
 }
