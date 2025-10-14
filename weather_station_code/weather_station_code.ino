@@ -276,9 +276,21 @@ Adafruit_GPS GPS(&Wire);
 
 uint32_t timer = millis();
 
+// float convertDDMMmmToDecimalDegrees(float coordinate, char direction) {
+//     int degrees = (int)coordinate;
+//     float minutes = (coordinate - degrees) * 100.0;
+//     float decimalDegrees = degrees + (minutes / 60.0);
+
+//     if (direction == 'S' || direction == 'W') {
+//         decimalDegrees = -decimalDegrees;
+//     }
+
+//     return decimalDegrees;
+// }
+
 float convertDDMMmmToDecimalDegrees(float coordinate, char direction) {
-    int degrees = (int)coordinate;
-    float minutes = (coordinate - degrees) * 100.0;
+    int degrees = (direction == 'E' || direction == 'W') ? int(coordinate / 100) : int(coordinate / 100);
+    float minutes = coordinate - (degrees * 100);
     float decimalDegrees = degrees + (minutes / 60.0);
 
     if (direction == 'S' || direction == 'W') {
@@ -287,6 +299,7 @@ float convertDDMMmmToDecimalDegrees(float coordinate, char direction) {
 
     return decimalDegrees;
 }
+
 
 void setupLOC(){
   //while (!Serial);  // uncomment to have the sketch wait until Serial is ready
@@ -340,7 +353,7 @@ void loopLOC(){
 
   // Wait for 10 seconds using a blocking loop
   unsigned long waitStart = millis(); // Capture the current time
-  while (millis() - waitStart < 10000) {
+  while (millis() - waitStart < 1100) {
     // This loop will hold the program for 10 seconds
     // read data from the GPS in the 'main loop'
     char c = GPS.read();
@@ -482,7 +495,6 @@ while (!GPS.fix || GPS.year < 25) {
   display.setCursor(0, 0);
   display.println();
   display.println("Filename created:");
-  display.println("Date used:");
   display.println(builtFilename);
   display.println();
   display.display();
@@ -490,7 +502,7 @@ while (!GPS.fix || GPS.year < 25) {
   Serial.print("Filename created: ");
   Serial.println(builtFilename + ".csv");
 
-  delay(3000);  // Pause to show filename
+  delay(5000);  // Pause to show filename
 
   return builtFilename;
 }

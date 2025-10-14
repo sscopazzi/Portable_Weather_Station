@@ -107,19 +107,23 @@ void loopDisplayAll(){
   display.setCursor(0,0);             // Start at top-left corner
 
   // send stbd lat/lon to OLED
-  // display.print("C: "); display.println(tempC);
-  display.print("V: "); display.println(vBat);
-  display.print("F: "); display.println(tempF);
-  display.print("H: "); display.println(humidity); 
-  display.print("P: "); display.println(pressurehPa); 
-  display.print("La: "); display.println(latDecimalDegrees,3); 
-  display.print("Lo:"); display.println(lonDecimalDegrees,2);
-  display.print("Sp: "); display.println(gpsSpeed); 
-  display.print("Al: "); display.print(gpsAltitude);
+  display.println("Time: ");
+  display.print((gpsHour < 10 ? "0" : "")); display.print(gpsHour); display.print(':');
+  display.print((gpsMinute < 10 ? "0" : "")); display.print(gpsMinute); display.print(':');
+  display.print((gpsSecond < 10 ? "0" : "")); display.println(gpsSecond); 
 
+  display.print("Volt: "); display.println(vBat);
+  display.print("Cel : "); display.println(tempC);
+  display.print("Far : "); display.println(tempF);
+  display.print("Hum : "); display.println(humidity); 
+  display.print("Pres: "); display.println(pressurehPa); 
+  display.print("Lat : "); display.println(latDecimalDegrees,3); 
+  display.print("Lon : "); display.println(lonDecimalDegrees,2);
+  display.print("Spe : "); display.println(gpsSpeed); 
+  display.print("Alt : "); display.println(gpsAltitude);
+  display.print("Sat : "); display.println(gpsSatellites);
 
   display.display();
-  // loopnum = loopnum + 1;
 }
 
 void loopDisplayLoc(){
