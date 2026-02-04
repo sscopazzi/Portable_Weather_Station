@@ -624,8 +624,8 @@ void setup() {
   display.println("");
   display.println("");
   display.println("  Sophie LV Scopazzi");
-  display.println("  Weather Station v1" );
-  display.println("     2025-10-05");
+  display.println("  Small Weather Station" );
+  display.println("     2026-02-03");
   display.display();
   delay(5000);
 }
