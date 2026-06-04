@@ -1,13 +1,5 @@
 #include "display.h" // DISPLAY FUNCTIONS IN .H 
 
-// ===================== USER TOGGLES =====================
-bool heater_on = false;   // SHT45 periodic anti-condensation heater pulse.
-                          // Leave false for normal logging. Set true ONLY if the
-                          // sensor keeps saturating / sticking at 100% RH. When
-                          // true, loopSHT45() fires a 1s heat pulse on a timer
-                          // and discards that (non-ambient) reading.
-// ========================================================
-
 // const char filename[] = "20250618_weatherstation_displayHist.txt";
 String timestamp_filename = "";   // YYYY-MM-DD hh-mm-ss in Mode 0 and YYYY-MM-DD in Modes 1 and 2
 
@@ -52,39 +44,32 @@ File32 dataFile;
 SdSpiConfig config(SD_CS_PIN, DEDICATED_SPI, SD_SCK_MHZ(16), &SPI1);
 unsigned long waitCounter = 0;  // counts seconds waiting
 
-// Show the SD-failure screen and halt.
-// Called whenever the card can't be initialised or a write fails. There's no
-// safe way to keep logging without storage, so we stop and wait for a restart.
-void sdCardFailed() {
-  Serial.println("Card failed, or not present :(");
-  display.clearDisplay();
-  display.setTextSize(1);
-  display.setTextColor(SH110X_WHITE);
-  display.setCursor(0, 0);
-  display.println("    SD card FAILED");
-  display.println("");
-  display.println("  RESTART or PLUG IN");
-  display.println("");
-  display.println("  <xxx> <xxx> <xxx>");
-  display.println("");
-  display.println("If it still doesn't");
-  display.println("work you may need to");
-  display.println("REFORMAT the card");
-  display.println("");
-  display.println("Try exFAT");
-  display.display();
-  while (1) {}  // Halt until the card is fixed and the board is restarted
-}
-
 // Initialize the SD card
 void setupSD() {
   delay(100);  // RP2040 delay is not a bad idea
 
   Serial.println("Initializing SD card...");
 
-  // Initialise the card; halt with the failure screen if it isn't there.
-  if (!SD.begin(config)) {
-    sdCardFailed();
+  // Retry mechanism for SD card initialization
+  while (!SD.begin(config)) {
+    Serial.println("Card failed, or not present :(");
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextColor(SH110X_WHITE);
+    display.setCursor(0, 0);
+    display.println("    SD card FAILED");
+    display.println("");
+    display.println("  RESTART or PLUG IN");
+    display.println("");
+    display.println("  <xxx> <xxx> <xxx>");
+    display.println("");
+    display.println("If it still doesn't");
+    display.println("work you may need to");
+    display.println("REFORMAT the card");
+    display.println("");
+    display.println("Try exFAT");
+    display.display();
+    while (1) {}  // Halt the system until the SD card is fixed
   }
 
   // Wait for GPS time and build filename
@@ -95,13 +80,30 @@ void setupSD() {
   // Open file and write the header once
   dataFile.open((timestamp_filename + ".csv").c_str(), O_WRITE | O_CREAT | O_APPEND);
   if (dataFile) {
-    dataFile.println("PORTABLE WEATHER STATION ver. 02 JUNE 2026");
+    dataFile.println("PORTABLE WEATHER STATION ver. 05 OCT 2025");
     dataFile.println("Time for valid fix: " + String(waitCounter));
     dataFile.println("time,tempC,tempF,humidity,pressurehPa,fix,fixQual,lat,latDir,lon,lonDir,speed,angle,alt,satNum,vBat");
     dataFile.close();
     Serial.println("Card initialized! Header added.");
   } else {
-    sdCardFailed();
+    Serial.println("Card failed, or not present :(");
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextColor(SH110X_WHITE);
+    display.setCursor(0, 0);
+    display.println("    SD card FAILED");
+    display.println("");
+    display.println("  RESTART or PLUG IN");
+    display.println("");
+    display.println("  <xxx> <xxx> <xxx>");
+    display.println("");
+    display.println("If it still doesn't");
+    display.println("work you may need to");
+    display.println("REFORMAT the card");
+    display.println("");
+    display.println("Try exFAT");
+    display.display();
+    while (1) {}  // Halt the system until the SD card is fixed
   }
 }
 
@@ -137,7 +139,24 @@ void loopSD() {
     dataFile.close();  // Close after writing
 
   } else {
-    sdCardFailed();
+    Serial.println("Card failed, or not present :(");
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextColor(SH110X_WHITE);
+    display.setCursor(0, 0);
+    display.println("    SD card FAILED");
+    display.println("");
+    display.println("  RESTART or PLUG IN");
+    display.println("");
+    display.println("  <xxx> <xxx> <xxx>");
+    display.println("");
+    display.println("If it still doesn't");
+    display.println("work you may need to");
+    display.println("REFORMAT the card");
+    display.println("");
+    display.println("Try exFAT");
+    display.display();
+    while (1) {}  // Halt the system until the SD card is fixed
   }
 }
 
@@ -155,11 +174,6 @@ void loopSD() {
 #include "Adafruit_SHT4x.h"
 
 Adafruit_SHT4x sht4 = Adafruit_SHT4x();
-
-// SHT45 heater timing (only used when heater_on == true).
-// A 1 s pulse every 10 min is ~0.17% duty cycle, well within Sensirion's 10% spec.
-const unsigned long HEATER_INTERVAL_MS = 10UL * 60UL * 1000UL;  // 10 minutes
-unsigned long lastHeaterPulse = 0;
 
 void setupSHT45(){
   Serial.println("Adafruit SHT4x test");
@@ -186,10 +200,10 @@ void setupSHT45(){
           break;
     }
 
-  // Heater OFF by default. The heater is for periodically burning off
-  // condensation, NOT for continuous use, so we never run it on every read.
-  // When heater_on is true, loopSHT45() pulses it on a timer instead.
-  sht4.setHeater(SHT4X_NO_HEATER);
+  // You can have 6 different heater settings
+  // higher heat and longer times uses more power
+  // and reads will take longer too!
+  sht4.setHeater(SHT4X_HIGH_HEATER_1S);
     switch (sht4.getHeater()) {
         case SHT4X_NO_HEATER: 
           Serial.println("No heater");
@@ -218,18 +232,7 @@ void setupSHT45(){
 void loopSHT45(){
   // Rename local variables to avoid name conflict
   sensors_event_t humidityEvent, tempEvent;
-
-  // Optional periodic anti-condensation pulse, only when heater_on is true.
-  // The reading taken WITH the heater on is not ambient, so it is discarded
-  // and we give the sensor a brief cool-down before the real measurement.
-  if (heater_on && (millis() - lastHeaterPulse >= HEATER_INTERVAL_MS)) {
-    sht4.setHeater(SHT4X_HIGH_HEATER_1S);
-    sht4.getEvent(&humidityEvent, &tempEvent);  // triggers heater, result discarded
-    sht4.setHeater(SHT4X_NO_HEATER);            // back to clean reads
-    lastHeaterPulse = millis();
-    delay(1000);  // brief cool-down (see note: 1 s is not full thermal settling)
-  }
-
+  
   uint32_t timestamp = millis();  // Record time before reading
   sht4.getEvent(&humidityEvent, &tempEvent);  // Populate temp and humidityEvent with fresh data
   timestamp = millis() - timestamp;  // Calculate how long the reading took
@@ -273,12 +276,21 @@ Adafruit_GPS GPS(&Wire);
 
 uint32_t timer = millis();
 
-// Convert DDMM.mmmm (as the GPS reports it) to signed decimal degrees.
-// The integer part is DDMM (degrees * 100 + whole minutes); the fraction is
-// fractional minutes. e.g. 4807.038 -> 48 deg + 7.038 min -> 48.1173 deg.
+// float convertDDMMmmToDecimalDegrees(float coordinate, char direction) {
+//     int degrees = (int)coordinate;
+//     float minutes = (coordinate - degrees) * 100.0;
+//     float decimalDegrees = degrees + (minutes / 60.0);
+
+//     if (direction == 'S' || direction == 'W') {
+//         decimalDegrees = -decimalDegrees;
+//     }
+
+//     return decimalDegrees;
+// }
+
 float convertDDMMmmToDecimalDegrees(float coordinate, char direction) {
-    int degrees = int(coordinate / 100);          // whole degrees
-    float minutes = coordinate - (degrees * 100); // remaining minutes
+    int degrees = (direction == 'E' || direction == 'W') ? int(coordinate / 100) : int(coordinate / 100);
+    float minutes = coordinate - (degrees * 100);
     float decimalDegrees = degrees + (minutes / 60.0);
 
     if (direction == 'S' || direction == 'W') {
@@ -339,9 +351,10 @@ void loopLOC(){
     //     return; // we can fail to parse a sentence in which case we should just wait for another
     // }
 
-  // Drain the GPS for ~1.1 seconds, parsing every complete sentence as it arrives.
+  // Wait for 10 seconds using a blocking loop
   unsigned long waitStart = millis(); // Capture the current time
   while (millis() - waitStart < 1100) {
+    // This loop will hold the program for 10 seconds
     // read data from the GPS in the 'main loop'
     char c = GPS.read();
     if (GPS.newNMEAreceived()) {
@@ -349,7 +362,7 @@ void loopLOC(){
         return; // we can fail to parse a sentence in which case we should just wait for another
     }
   }
-  // Once the window has passed, process GPS data
+  // Once 10 seconds have passed, process GPS data
   // timer = millis(); // Reset the timer after the wait
 
     // if (millis() - timer > 2000) {
@@ -374,14 +387,8 @@ void loopLOC(){
         gpsLonDir = GPS.lon;
 
         // Convert latitude and longitude to decimal degrees
-        // latDecimalDegrees = convertDDMMmmToDecimalDegrees(gpsLatitude, gpsLatDir);
-        // lonDecimalDegrees = convertDDMMmmToDecimalDegrees(gpsLongitude, gpsLonDir);
-
-        // OPTIONAL (more precise): the library already provides signed decimal
-        // degrees as 32-bit fixed point. A float can't resolve all 7 logged
-        // decimals at high longitudes, so for full precision swap to:
-        latDecimalDegrees = GPS.latitude_fixed  / 10000000.0;
-        lonDecimalDegrees = GPS.longitude_fixed / 10000000.0;
+        latDecimalDegrees = convertDDMMmmToDecimalDegrees(gpsLatitude, gpsLatDir);
+        lonDecimalDegrees = convertDDMMmmToDecimalDegrees(gpsLongitude, gpsLonDir);
 
         gpsSpeed = GPS.speed;
         gpsAngle = GPS.angle;
@@ -426,46 +433,41 @@ void loopLOC(){
 }
 
 String getGPSFilename() {
-  // Wait until GPS time is valid (need a fix AND a sane year).
-  while (!GPS.fix || GPS.year < 25) {
+  // Wait until GPS time is valid
+while (!GPS.fix || GPS.year < 25) {
+  Serial.print("Satellites: ");
+  Serial.print(GPS.satellites);
+  Serial.print("  Fix: ");
+  Serial.print(GPS.fix ? "YES" : "NO");
+  Serial.print("  Wait: ");
+  Serial.print(waitCounter);
+  Serial.println("s");
 
-    // --- Status to Serial ---
-    Serial.print("Satellites: ");
-    Serial.print(GPS.satellites);
-    Serial.print("  Fix: ");
-    Serial.print(GPS.fix ? "YES" : "NO");
-    Serial.print("  Wait: ");
-    Serial.print(waitCounter);
-    Serial.println("s");
+  // --- OLED Display ---
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SH110X_WHITE);
+  display.setCursor(0, 0);
+  display.println("WAITING FOR GPS TIME");
+  display.println();
+  display.println("Searching...");
+  display.println("");
+  display.print("Fix:  "); display.println(GPS.fix ? "YES" : "NO");
+  display.print("Sats: "); display.println(GPS.satellites);
+  // display.print("Year: "); display.println(GPS.year);
+  display.println();
+  display.print("Wait: "); display.print(waitCounter); display.println("s");
+  display.display();
 
-    // --- OLED Display ---
-    display.clearDisplay();
-    display.setTextSize(1);
-    display.setTextColor(SH110X_WHITE);
-    display.setCursor(0, 0);
-    display.println("WAITING FOR GPS TIME");
-    display.println();
-    display.println("Searching...");
-    display.println("");
-    display.print("Fix:  "); display.println(GPS.fix ? "YES" : "NO");
-    display.print("Sats: "); display.println(GPS.satellites);
-    // display.print("Year: "); display.println(GPS.year);
-    display.println();
-    display.print("Wait: "); display.print(waitCounter); display.println("s");
-    display.display();
+  // --- GPS Update ---
+  delay(1000);  // 1 second per count
+  waitCounter++;
 
-    // --- Drain the GPS for ~1 second, parsing EVERY complete sentence ---
-    // The old code read a single byte per second, so it almost never
-    // assembled a full NMEA sentence and could wait forever even with sats.
-    unsigned long waitStart = millis();
-    while (millis() - waitStart < 1000) {
-      GPS.read();                    // keep pulling bytes so the buffer keeps up
-      if (GPS.newNMEAreceived()) {
-        GPS.parse(GPS.lastNMEA());   // also clears the newNMEAreceived() flag
-      }
-    }
-    waitCounter++;  // 1 second per count
+  char c = GPS.read();
+  if (GPS.newNMEAreceived()) {
+    GPS.parse(GPS.lastNMEA());
   }
+}
 
   // <<< START OF FIX >>>
   // Update global time variables with the data from the internal GPS object 
@@ -535,7 +537,7 @@ String getGPSFilename() {
 #define BMP_MOSI 11
 #define BMP_CS 10
 
-#define SEALEVELPRESSURE_HPA (1013.25) // used for altitude (not relied on here)
+#define SEALEVELPRESSURE_HPA (1013.25) // used for altitude but this is bad to hard code
 
 Adafruit_BMP3XX bmp;
 
@@ -613,17 +615,17 @@ void setup() {
   display.setTextSize(1);             // Normal 1:1 pixel scale
   display.setTextColor(SH110X_WHITE);        // Draw white text
   display.setCursor(0,0);             // Start at top-left corner
-  display.println("<<ALL SENSORS INIT>>");
-  display.println("<<ALL SENSORS INIT>>");
-  display.println("<<ALL SENSORS INIT>>");
+  display.println(" <<ALL SENSORS INIT>>");
+  display.println(" <<ALL SENSORS INIT>>");
+  display.println(" <<ALL SENSORS INIT>>");
   display.println("");
   display.println("");
   heart();
   display.println("");
   display.println("");
-  display.println(" Sophie LV Scopazzi");
-  display.println(" Small Weather Station" );
-  display.println("    2026-02-03");
+  display.println("  Sophie LV Scopazzi");
+  display.println("  Small Weather Station" );
+  display.println("     2026-02-03");
   display.display();
   delay(5000);
 }
