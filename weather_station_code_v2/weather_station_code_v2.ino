@@ -70,7 +70,7 @@
 //                   OLED stays ON the whole time. NOT for battery deployment.
 #define MODE_SLEEP        0
 #define MODE_CONTINUOUS   1
-int     deviceMode      = MODE_CONTINUOUS;
+int     deviceMode      = MODE_SLEEP;
 
 #define WS_WAIT_MINUTES          10       // MODE_SLEEP interval, minutes (clock-aligned)
 #define WS_CONTINUOUS_INTERVAL_MS 1000UL // MODE_CONTINUOUS interval (10 s)
@@ -487,6 +487,9 @@ void setup() {
   display.setCursor(0, 0);
   display.println("Weather Stn v2 <3");
   display.display();
+
+  Serial.println("SYSTEM START - Weather Stn v2 <3");
+  Serial.print("Device Mode is set to: "); Serial.println(deviceMode);
   delay(1500);
 
   // --- RTC ---
