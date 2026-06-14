@@ -207,10 +207,76 @@ void sdCardFailed() {
   while (1) {}   // halt until fixed and restarted
 }
 
+// ----------------------------------------------------------------------------
+// Voltage-only screen — DVD-logo bounce (charge monitor / SD unavailable)
+// ----------------------------------------------------------------------------
+// Reads vBat periodically and bounces the reading around the panel like the old
+// DVD screensaver. Continuous motion doubles as the best burn-in defense: each
+// pixel is lit only for the frame or two the text sweeps over it. Small font
+// (TXT=1) keeps the lit footprint tiny so the wear spreads even thinner. Does
+// NOT return — waits for a power cycle, same as sdCardFailed(). Brownout cutoff
+// isn't enforced here (no open file to protect).
+void voltageOnlyScreen() {
+  Serial.println("Voltage-only DVD-bounce screen (charge monitor / SD unavailable).");
+
+  // SH1107 over I2C is the frame-rate bottleneck: a full 1024-byte refresh is
+  // ~90 ms at 100 kHz (~10 fps). Nothing else shares the bus once we're in here
+  // and we never return, so bump to 400 kHz for smooth motion. Drop back to
+  // 100000 if the panel ever glitches on your wiring.
+  Wire.setClock(400000);
+
+  const uint8_t  TXT      = 1;             // small font -> fewer lit pixels
+  const int16_t  strW     = 6 * 6 * TXT;   // "4.05 V" = 6 chars (36 px @ TXT=1)
+  const int16_t  strH     = 8 * TXT;       // 8 px tall
+  const int16_t  maxX     = display.width()  - strW;
+  const int16_t  maxY     = display.height() - strH;
+  const uint16_t FRAME_MS = 30;            // animation step
+  const unsigned long VREAD_MS = 5000UL;   // re-read voltage every 5 s
+
+  int16_t x  = 0, y = 0;
+  int8_t  vx = 2, vy = 1;                  // px/frame; mismatched speeds = nicer path
+  unsigned long lastVread = millis();
+
+  oledWake();
+  readVBat();
+  for (;;) {
+    if (millis() - lastVread >= VREAD_MS) {
+      lastVread = millis();
+      readVBat();
+      Serial.print("VOLT-ONLY vBat="); Serial.println(vBat, 2);
+    }
+
+    display.clearDisplay();
+    display.setTextSize(TXT);
+    display.setTextColor(SH110X_WHITE);
+    display.setCursor(x, y);
+    display.print(vBat, 2);
+    display.print(" V");
+    display.display();
+
+    // move and bounce off the edges
+    x += vx;
+    if (x < 0)    { x = 0;    vx = -vx; }
+    if (x > maxX) { x = maxX; vx = -vx; }
+    y += vy;
+    if (y < 0)    { y = 0;    vy = -vy; }
+    if (y > maxY) { y = maxY; vy = -vy; }
+
+    delay(FRAME_MS);
+  }
+}
+
 void setupSD() {
   delay(100);
   Serial.println("Initializing SD card...");
-  if (!SD.begin(config)) sdCardFailed();
+  unsigned long t0 = millis();
+  while (!SD.begin(config)) {
+    if (millis() - t0 >= 10000UL) {   // failing for >30 s -> give up, show voltage
+      voltageOnlyScreen();            // does not return
+    }
+    Serial.println("SD init retry...");
+    delay(1000);
+  }
   Serial.println("Card initialized!");
 }
 
