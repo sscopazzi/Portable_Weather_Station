@@ -75,7 +75,7 @@ int     deviceMode      = MODE_SLEEP;
 #define WS_WAIT_MINUTES          10       // MODE_SLEEP interval, minutes (clock-aligned)
 #define WS_CONTINUOUS_INTERVAL_MS 1000UL // MODE_CONTINUOUS interval (10 s)
 #define WS_DISPLAY_ON_MS         5000UL   // MODE_SLEEP: how long the OLED shows each sample
-int     timeZone        = -7;       // local offset from UTC, for compile-time RTC set
+int     timeZone        = -8;       // local offset from UTC, for compile-time RTC set
 
 // Battery divider correction. MEASURE: read vBat from serial while reading the
 // pack with a multimeter, then tune this until they match. Corrects for not
@@ -288,7 +288,7 @@ void ensureDailyFile() {
   snprintf(d, sizeof(d), "%04d-%02d-%02d", now.year(), now.month(), now.day());
   timestamp_filename = String(d);
 
-  dataFile.open((timestamp_filename + ".csv").c_str(), O_WRITE | O_CREAT | O_APPEND);
+  dataFile.open(("wx_station_" + timestamp_filename + ".csv").c_str(), O_WRITE | O_CREAT | O_APPEND);
   if (!dataFile) sdCardFailed();
   if (dataFile.fileSize() == 0) {
     dataFile.println("PORTABLE WEATHER STATION v2");
@@ -299,7 +299,7 @@ void ensureDailyFile() {
 
 void writeRow() {
   DateTime now = rtc.now();
-  dataFile.open((timestamp_filename + ".csv").c_str(), O_WRITE | O_CREAT | O_APPEND);
+  dataFile.open(("wx_station_" + timestamp_filename + ".csv").c_str(), O_WRITE | O_CREAT | O_APPEND);
   if (!dataFile) { sdCardFailed(); return; }
   dataFile.print(now.timestamp(DateTime::TIMESTAMP_FULL)); dataFile.print(',');
   dataFile.print(tempC, 2);       dataFile.print(',');
@@ -406,7 +406,7 @@ void lowBattShutdown() {
   // Final marker line. Deliberately 3 fields (not 9) so any parser can spot it;
   // every row above it is complete and clean.
   DateTime now = rtc.now();
-  dataFile.open((timestamp_filename + ".csv").c_str(), O_WRITE | O_CREAT | O_APPEND);
+  dataFile.open(("wx_station_" + timestamp_filename + ".csv").c_str(), O_WRITE | O_CREAT | O_APPEND);
   if (dataFile) {
     dataFile.print("LOW_BATT_SHUTDOWN,");
     dataFile.print(now.timestamp(DateTime::TIMESTAMP_FULL));
@@ -566,7 +566,13 @@ void setup() {
     while (1) {}
   }
   rtc.writeSqwPinMode(DS3231_OFF);          // INT pin used for alarms, not square wave
+
   if (rtc.lostPower()) setRtcCompileTimeUTC();
+
+  // DO ONCE
+  // setRtcCompileTimeUTC();
+  
+
   rtc.clearAlarm(1);
   rtc.clearAlarm(2);
   pinMode(RTC_INT_PIN, INPUT_PULLUP);
